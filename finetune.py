@@ -107,7 +107,7 @@ class PruningFineTuner:
             optimizer = optim.SGD(model.classifier.parameters(), lr=0.0001, momentum=0.9)
 
         for i in range(epochs):
-            print("Training Epoch: [%d/%d]" % (i+1, epochs))
+            print("Epoch: [%d/%d]" % (i+1, epochs))
             self.train_epoch(optimizer)
             self.test()
             print()

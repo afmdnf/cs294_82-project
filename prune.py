@@ -21,14 +21,14 @@ def prune_vgg16_conv_layer(model, layer_index, filter_index, use_cuda=False):
             break
         offset += 1
 
-    new_conv = torch.nn.Conv2d(in_channels = conv.in_channels,
-            out_channels = conv.out_channels - 1,
-            kernel_size = conv.kernel_size,
-            stride = conv.stride,
-            padding = conv.padding,
-            dilation = conv.dilation,
-            groups = conv.groups,
-            bias = (conv.bias is not None))
+    new_conv = torch.nn.Conv2d(in_channels=conv.in_channels,
+            out_channels=conv.out_channels - 1,
+            kernel_size=conv.kernel_size,
+            stride=conv.stride,
+            padding=conv.padding,
+            dilation=conv.dilation,
+            groups=conv.groups,
+            bias=(conv.bias is not None))
 
     old_weights = conv.weight.data.cpu().numpy()
     new_weights = new_conv.weight.data.cpu().numpy()
@@ -41,7 +41,7 @@ def prune_vgg16_conv_layer(model, layer_index, filter_index, use_cuda=False):
 
     bias_numpy = conv.bias.data.cpu().numpy()
 
-    bias = np.zeros(shape = (bias_numpy.shape[0] - 1), dtype = np.float32)
+    bias = np.zeros(shape=(bias_numpy.shape[0] - 1), dtype=np.float32)
     bias[:filter_index] = bias_numpy[:filter_index]
     bias[filter_index : ] = bias_numpy[filter_index + 1 :]
     new_conv.bias.data = torch.from_numpy(bias)
@@ -49,14 +49,14 @@ def prune_vgg16_conv_layer(model, layer_index, filter_index, use_cuda=False):
         new_conv.bias.data = new_conv.bias.data.cuda()
 
     if not next_conv is None:
-        next_new_conv = torch.nn.Conv2d(in_channels = next_conv.in_channels - 1,
-                out_channels =  next_conv.out_channels,
-                kernel_size = next_conv.kernel_size,
-                stride = next_conv.stride,
-                padding = next_conv.padding,
-                dilation = next_conv.dilation,
-                groups = next_conv.groups,
-                bias = (next_conv.bias is not None))
+        next_new_conv = torch.nn.Conv2d(in_channels=next_conv.in_channels - 1,
+                out_channels=next_conv.out_channels,
+                kernel_size=next_conv.kernel_size,
+                stride=next_conv.stride,
+                padding=next_conv.padding,
+                dilation=next_conv.dilation,
+                groups=next_conv.groups,
+                bias=(next_conv.bias is not None))
 
         old_weights = next_conv.weight.data.cpu().numpy()
         new_weights = next_new_conv.weight.data.cpu().numpy()
@@ -78,7 +78,7 @@ def prune_vgg16_conv_layer(model, layer_index, filter_index, use_cuda=False):
 
         model.features = features
 
-    else: # Pruning the last conv layer
+    else: # Pruning the final conv layer
         model.features = torch.nn.Sequential(
                 *(replace_layers(model.features, i, [layer_index], \
                     [new_conv]) for i, _ in enumerate(model.features)))
