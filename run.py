@@ -82,8 +82,8 @@ class FilterPruner:
 
 class PruningFineTuner:
     def __init__(self, train_path, test_path, model):
-        self.train_data_loader = dataset.loader(train_path)
-        self.test_data_loader = dataset.test_loader(test_path)
+        self.train_path = train_path
+        self.test_path = test_path
 
         self.model = model
         self.criterion = torch.nn.CrossEntropyLoss()
@@ -93,7 +93,7 @@ class PruningFineTuner:
     def test(self):
         self.model.eval()
         correct, total = 0, 0
-        for i, (batch, label) in enumerate(self.test_data_loader):
+        for i, (batch, label) in enumerate(dataset.test_loader(self.test_path)):
             output = model(Variable(batch))
             pred = output.data.max(1)[1]
             correct += pred.cpu().eq(label).sum()
@@ -107,10 +107,9 @@ class PruningFineTuner:
             optimizer = optim.SGD(model.classifier.parameters(), lr=0.0001, momentum=0.9)
 
         for i in range(epochs):
-            print("Epoch: [%d/%d]" % (i+1, epochs))
+            print("\nEpoch [%d/%d]" % (i+1, epochs))
             self.train_epoch(optimizer)
             self.test()
-            print()
 
     def train_batch(self, optimizer, batch, label, rank_filters):
         self.model.zero_grad()
@@ -124,7 +123,7 @@ class PruningFineTuner:
             optimizer.step()
 
     def train_epoch(self, optimizer=None, rank_filters=False):
-        for i, (batch, label) in enumerate(self.train_data_loader):
+        for i, (batch, label) in enumerate(dataset.loader(self.train_path)):
             self.train_batch(optimizer, batch, label, rank_filters)
 
     def get_candidates_to_prune(self, num_filters_to_prune):
@@ -151,13 +150,13 @@ class PruningFineTuner:
         iterations = int(iterations * 2.0 / 3)
         print("Number of pruning iterations to remove 67% filters:", iterations)
 
-        for _ in range(iterations):
+        for i in range(iterations):
             prune_targets = self.get_candidates_to_prune(num_filters_to_prune_per_iter)
             layers_pruned = {}
             for layer_index, filter_index in prune_targets:
                 if layer_index not in layers_pruned:
                     layers_pruned[layer_index] = 0
-                layers_pruned[layer_index] = layers_pruned[layer_index] + 1
+                layers_pruned[layer_index] += 1
 
             print("Layers to be pruned:", layers_pruned)
             model = self.model.cpu()
@@ -171,10 +170,11 @@ class PruningFineTuner:
             print("Fine tuning...")
             optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
             self.train(optimizer, epochs=2)
+            torch.save(model.state_dict(), "pruned_model_"+str(i+1))
             print("======================================")
 
         print("Final fine tuning...")
-        self.train(optimizer, epochs=5)
+        self.train(optimizer, epochs=4)
         torch.save(model.state_dict(), "pruned_model")
 
 
